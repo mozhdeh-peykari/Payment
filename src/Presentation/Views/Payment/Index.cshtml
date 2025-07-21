@@ -1,0 +1,16 @@
+﻿@page
+@model Presentation.Models.Payment.PaymentInputModel
+@{
+}
+
+
+@using (Html.BeginForm("StartPayment", "Payment", FormMethod.Post))
+{
+    <div>
+        @Html.LabelFor(m => m.Amount)
+        @Html.TextBoxFor(m => m.Amount, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.Amount)
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary">Pay Now</button>
+}

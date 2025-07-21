@@ -1,0 +1,18 @@
+﻿@page
+@model Presentation.Views.Payment.RedirectToGatewayModel
+@{
+    Layout = null;
+    var token = ViewBag.Token as string;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting...</title>
+</head>
+<body onload="document.forms[0].submit()">
+    <form action="https://ikc.shaparak.ir/iuiv3/IPG/Index" method="post">
+        <input type="hidden" name="tokenIdentity" value="@token" />
+    </form>
+</body>
+</html>
