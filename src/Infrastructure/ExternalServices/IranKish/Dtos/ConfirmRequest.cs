@@ -8,7 +8,7 @@ namespace Infrastructure.ExternalServices.IranKish.Dtos
 {
     public class ConfirmRequest
     {
-        public int terminalId { get; set; }
+        public string terminalId { get; set; }
 
         public int retrievalReferenceNumber { get; set; }
 

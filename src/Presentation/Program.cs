@@ -1,12 +1,19 @@
-using Presentation.Models.Settings;
-using System.Runtime;
+using Application;
+using Domain;
+using Domain.Settings;
+using Infrastructure;
+using Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
-
+//builder.AddDomainServices();
 builder.Services.Configure<PaymentServiceSettings>(builder.Configuration.GetSection("IranKish"));
+builder.AddInfrastructureServices();
+builder.AddPersistenceServices();
+builder.AddApplicationServices();
+
+builder.Services.AddControllersWithViews();
 
 
 var app = builder.Build();

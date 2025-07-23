@@ -10,5 +10,7 @@ namespace Infrastructure.ExternalServices.IranKish
     public interface IIranKishClient
     {
         Task<string> GetTokenAsync(TokenRequest req);
+
+        Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req);
     }
 }

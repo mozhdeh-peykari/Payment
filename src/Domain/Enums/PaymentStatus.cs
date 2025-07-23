@@ -1,7 +1,9 @@
-﻿namespace Domain.Entities
+﻿namespace Domain.Enums
 {
     public enum PaymentStatus
     {
+        Init,
+
         Pending,
 
         Paid,

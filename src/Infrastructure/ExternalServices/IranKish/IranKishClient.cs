@@ -1,5 +1,6 @@
 ﻿using Domain.Settings;
 using Infrastructure.ExternalServices.IranKish.Dtos;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
 namespace Infrastructure.ExternalServices.IranKish
@@ -10,10 +11,10 @@ namespace Infrastructure.ExternalServices.IranKish
         private readonly PaymentServiceSettings _settings;
 
         public IranKishClient(HttpClient httpClient,
-            PaymentServiceSettings settings)
+            IOptions<PaymentServiceSettings> settings)
         {
             _httpClient = httpClient;
-            _settings = settings;
+            _settings = settings.Value;
             _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
         }
 
