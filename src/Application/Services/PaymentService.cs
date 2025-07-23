@@ -8,151 +8,147 @@ using Infrastructure.ExternalServices.IranKish;
 using Infrastructure.ExternalServices.IranKish.Dtos;
 using Infrastructure.ExternalServices.IranKish.Helpers;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
-namespace Application.Services
+namespace Application.Services;
+
+public class PaymentService : IPaymentService
 {
-    public class PaymentService : IPaymentService
+    private readonly PaymentServiceSettings _settings;
+    private readonly IIranKishClient _client;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PaymentService(IOptions<PaymentServiceSettings> settings,
+        IIranKishClient client,
+        IUnitOfWork unitOfWork)
     {
-        private readonly PaymentServiceSettings _settings;
-        private readonly IIranKishClient _client;
-        private readonly IUnitOfWork _unitOfWork;
+        _settings = settings.Value;
+        _client = client;
+        _unitOfWork = unitOfWork;
+    }
 
-        public PaymentService(IOptions<PaymentServiceSettings> settings,
-            IIranKishClient client,
-            IUnitOfWork unitOfWork)
+    public async Task<string> GetTokenAsync(GetTokenRequest model)
+    {
+        //generate auth envelope
+        var envelope = CryptoHelper.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
+
+        //init transaction into db
+        var transaction = new PaymentTransaction(amount: model.Amount,
+            terminalId: _settings.TerminalId,
+            acceptorId: _settings.AcceptorId,
+            type: TransactionType.Purchase);
+
+        await _unitOfWork.Transactions.AddAsync(transaction);
+        await _unitOfWork.SaveAsync();
+
+        //prepare req
+        var tokenRequest = new TokenRequest
         {
-            _settings = settings.Value;
-            _client = client;
-            _unitOfWork = unitOfWork;
+            authenticationEnvelope = new AuthenticationEnvelope
+            {
+                iv = envelope.IV,
+                data = envelope.Data
+            },
+            request = new Request
+            {
+                transactionType = transaction.Type.ToString(),
+                terminalId = _settings.TerminalId,
+                acceptorId = _settings.AcceptorId,
+                amount = model.Amount,
+                revertUri = model.ReturnUrl,
+                requestId = transaction.RequestId,
+                requestTimestamp = ((DateTimeOffset)transaction.CreatedDate.ToUniversalTime()).ToUnixTimeSeconds()
+            }
+        };
+
+        //call api
+        var response = await _client.GetTokenAsync(tokenRequest);
+
+        //validate token
+        //update db
+        if (response?.status ?? false)
+        {
+            var token = response.result?.ToString();
+            transaction.Tokenized(token, JsonSerializer.Serialize(tokenRequest));
+            await _unitOfWork.Transactions.SaveAsync();
+
+            return token;
         }
-
-        public async Task<string> GetTokenAsync(GetTokenRequest model)
+        else
         {
-            //generate auth envelope
-            var envelope = CryptoHelper.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
-
-            //prepare req
-            var tokenRequest = new TokenRequest
-            {
-                authenticationEnvelope = new AuthenticationEnvelope
-                {
-                    iv = envelope.IV,
-                    data = envelope.Data
-                },
-                request = new Request
-                {
-                    transactionType = "Purchase",
-                    terminalId = _settings.TerminalId,
-                    acceptorId = _settings.AcceptorId,
-                    amount = model.Amount,
-                    revertUri = model.ReturnUrl,
-                    requestId = Guid.NewGuid().ToString("N").Substring(0, 20),
-                    requestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                }
-            };
-
-            //init transaction into db
-            var transaction = new PaymentTransaction
-            {
-                Amount = model.Amount,
-                PaymentStatus = PaymentStatus.Init,
-                Token = "",
-                ConfirmedTime = default,
-                RequestId = default,
-                RequestTime = DateTime.UtcNow,
-                TerminalId = _settings.TerminalId,
-            };
-            transaction.AddEvent(eventType: TransactionEventType.Initiated, message: "", parameters: JsonSerializer.Serialize(tokenRequest));
-            await _unitOfWork.Transactions.AddAsync(transaction);
+            transaction.TokenGenerationFailed(JsonSerializer.Serialize(tokenRequest));
             await _unitOfWork.SaveAsync();
 
-            //call api
-            var token = await _client.GetTokenAsync(tokenRequest);
-
-            //validate token
-            //update db
-            if (IsTokenValid(token))
-            {
-                transaction.PaymentStatus = PaymentStatus.Pending;
-
-                transaction.Events.Add(new TransactionEvent
-                {
-                    EventType = TransactionEventType.TokenGenerated,
-                    Message = "Token generation failed",
-                    CreatedAt = DateTime.UtcNow,
-                });
-
-                await _unitOfWork.Transactions.SaveAsync();
-
-                return token;
-            }
-            else
-            {
-                transaction.Events.Add(new TransactionEvent
-                {
-                    EventType = TransactionEventType.TokenGenerationFailed,
-                    Message = "Token generation failed",
-                    CreatedAt = DateTime.UtcNow,
-                });
-                await _unitOfWork.SaveAsync();
-
-                return null;
-            }
+            return null;
         }
+    }
 
-        public bool IsTokenValid(string token)
+    public bool IsTokenValid(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
         {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return false;
-            }
-
-            return true;
+            return false;
         }
 
-        public async Task<VerifyResponse> Verify(VerifyRequest model)
+        return true;
+    }
+
+    public async Task<VerifyResponse> Verify(VerifyRequest model)
+    {
+        if (!model.IsValid())
         {
-            if (model.IsValid())
-            {
 
-            }
-            else
-            {
-
-            }
-
-            //get transaction
-            var transaction = await _unitOfWork.Transactions.GetFirstOrDefaultAsync(x => x.Token == model.Token && x.RequestId == model.RequestId);
-            if (transaction == null)
-            {
-                throw new Exception($"Transaction not found. Token: {model.Token}, RequestId: {model.RequestId}");
-            }
-
-            var request = new ConfirmRequest
-            {
-                terminalId = _settings.TerminalId,
-                tokenIdentity = model.Token,
-                retrievalReferenceNumber = 0, //?
-                systemTraceAuditNumber = 0 //?
-            };
-
-            transaction.AddEvent(eventType: TransactionEventType.Paid, message: "Returned from gateway", parameters: JsonSerializer.Serialize(request));
-
-            var response = await _client.ConfirmAsync(request);
-
-            //map response code to status
-
-            //update
-            transaction.PaymentStatus = PaymentStatus.Paid;
-
-            var res = new VerifyResponse
-            {
-                PaymentStatus = transaction.PaymentStatus,
-            };
-
-            return res;
         }
+
+        //get transaction
+        var transaction = await _unitOfWork.Transactions.GetFirstOrDefaultAsync(x => x.Token == model.Token && x.RequestId == model.RequestId);
+        if (transaction == null)
+        {
+            //log
+            throw new Exception($"Transaction not found. Token: {model.Token}, RequestId: {model.RequestId}");
+        }
+
+        //map response code
+        if (!model.IsSuccessful())
+        {
+            transaction.PaymentFailed(parameters: JsonSerializer.Serialize(model));
+            //log
+            throw new Exception($"Payment failed. TransactionId: {transaction.Id}");
+        }
+
+        transaction.Paid(parameters: JsonSerializer.Serialize(model));
+        await _unitOfWork.SaveAsync();
+
+        var request = new ConfirmRequest
+        {
+            terminalId = _settings.TerminalId,
+            tokenIdentity = model.Token,
+            retrievalReferenceNumber = model.RetrievalReferenceNumber,
+            systemTraceAuditNumber = model.SystemTraceAuditNumber
+        };
+
+        var response = await _client.ConfirmAsync(request);
+
+        //map response code to status
+        var res = new VerifyResponse
+        {
+            PaymentStatus = transaction.PaymentStatus, //?
+            Amount = response.amount,
+            TransactionDate = DateTime.ParseExact($"{response.transactionDate:D8}{response.transactionTime:D6}", "yyyyMMddHHmmss", CultureInfo.InvariantCulture)
+        };
+
+        if (!res.IsSuccessful())
+        {
+            transaction.VerificationFailed(parameters: JsonSerializer.Serialize(model));
+            await _unitOfWork.SaveAsync();
+            //log
+            throw new Exception($"Verification failed. TransactionId: {transaction.Id}");
+        }
+
+        transaction.Verified(parameters: JsonSerializer.Serialize(model));
+        await _unitOfWork.SaveAsync();
+
+        return res;
     }
 }

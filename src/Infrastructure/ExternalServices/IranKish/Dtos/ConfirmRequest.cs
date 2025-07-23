@@ -10,9 +10,9 @@ namespace Infrastructure.ExternalServices.IranKish.Dtos
     {
         public string terminalId { get; set; }
 
-        public int retrievalReferenceNumber { get; set; }
+        public string retrievalReferenceNumber { get; set; }
 
-        public int systemTraceAuditNumber { get; set; }
+        public string systemTraceAuditNumber { get; set; }
 
         public string tokenIdentity { get; set; }
     }

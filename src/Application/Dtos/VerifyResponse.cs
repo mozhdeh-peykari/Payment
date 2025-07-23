@@ -1,14 +1,17 @@
 ﻿using Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Application.Dtos
+namespace Application.Dtos;
+
+public class VerifyResponse
 {
-    public class VerifyResponse
+    public PaymentStatus PaymentStatus { get; set; }
+
+    public DateTime TransactionDate { get; set; }
+
+    public int Amount { get; set; }
+
+    public bool IsSuccessful()
     {
-        public PaymentStatus PaymentStatus { get; set; }
+        return true;
     }
 }

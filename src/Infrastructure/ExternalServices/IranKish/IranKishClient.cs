@@ -2,6 +2,7 @@
 using Infrastructure.ExternalServices.IranKish.Dtos;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Infrastructure.ExternalServices.IranKish
 {
@@ -18,12 +19,13 @@ namespace Infrastructure.ExternalServices.IranKish
             _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
         }
 
-        public async Task<string> GetTokenAsync(TokenRequest req)
+        public async Task<TokenResponse> GetTokenAsync(TokenRequest req)
         {
             var response = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
-            var token = await response.Content.ReadAsStringAsync();
+            var res = await response.Content.ReadAsStringAsync();
+            var serialized = JsonSerializer.Deserialize<TokenResponse>(res);
 
-            return token;
+            return serialized;
         }
 
         public async Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req)

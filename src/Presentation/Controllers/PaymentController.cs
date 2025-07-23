@@ -28,7 +28,7 @@ public class PaymentController : Controller
         var tokenRequest = new GetTokenRequest
         {
             Amount = model.Amount,
-            ReturnUrl = Url.Action("Verify", "Payment")
+            ReturnUrl = "https://localhost:7190/Payment/Verify"
         };
 
         var token = await _paymentService.GetTokenAsync(tokenRequest);
@@ -49,6 +49,8 @@ public class PaymentController : Controller
         string acceptorId = Request.Form["acceptorId"];
         string responseCode = Request.Form["responseCode"];
         string amount = Request.Form["amount"];
+        string retrievalReferenceNumber = Request.Form["retrievalReferenceNumber"];
+        string systemTraceAuditNumber = Request.Form["systemTraceAuditNumber"];
 
         if (string.IsNullOrEmpty(token))
         {
@@ -66,6 +68,8 @@ public class PaymentController : Controller
             AcceptorId = acceptorId,
             ResponseCode = responseCode,
             Amount = amount,
+            RetrievalReferenceNumber = retrievalReferenceNumber,
+            SystemTraceAuditNumber = systemTraceAuditNumber
         };
         var result = await _paymentService.Verify(request);
 

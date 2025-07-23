@@ -8,6 +8,8 @@
 
         Paid,
 
+        Verified,
+
         Failed
     }
 }

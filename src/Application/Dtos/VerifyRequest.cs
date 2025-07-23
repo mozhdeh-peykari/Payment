@@ -18,6 +18,15 @@ namespace Application.Dtos
 
         public string? Amount { get; set; }
 
+        public string RetrievalReferenceNumber { get; set; }
+
+        public string SystemTraceAuditNumber { get; set; }
+
         public bool IsValid() { return true; }
+
+        public bool IsSuccessful()
+        {
+            return true;
+        }
     }
 }
