@@ -32,17 +32,17 @@ namespace Infrastructure.ExternalServices.IranKish
                 var response = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
                 res = await response.Content.ReadAsStringAsync();
 
-                _logger.Info("[IranKishClient].[GetTokenAsync]", new { Request = req, Response = res });
+                //_logger.Info("[IranKishClient].[GetTokenAsync]", new { Request = req, Response = res });
             }
             catch (Exception ex)
             {
                 _logger.Error("[IranKishClient].[GetTokenAsync]", ex, new { Request = req, Response = res });
             }
 
-            if (res == null)
-            {
-                return null;
-            }
+            //if (res == null)
+            //{
+            //    return null;
+            //}
 
             var deserialized = JsonSerializer.Deserialize<TokenResponse>(res);
             return deserialized;
@@ -56,17 +56,17 @@ namespace Infrastructure.ExternalServices.IranKish
                 var response = await _httpClient.PostAsJsonAsync(_settings.Verify, req);
                 res = await response.Content.ReadAsStringAsync();
 
-                _logger.Info("[IranKishClient].[ConfirmAsync]", new { Request = req, Response = res });
+                //_logger.Info("[IranKishClient].[ConfirmAsync]", new { Request = req, Response = res });
             }
             catch (Exception ex)
             {
                 _logger.Error("[IranKishClient].[ConfirmAsync]", ex, new { Request = req, Response = res });
             }
 
-            if (res == null)
-            {
-                return null;
-            }
+            //if (res == null)
+            //{
+            //    return null;
+            //}
 
             var deserialized = JsonSerializer.Deserialize<ConfirmResponse>(res);
             return deserialized;

@@ -8,9 +8,7 @@ public class PaymentDetail
 
     public int PaymentId { get; set; }
 
-    public PaymentDetailStatus Status { get; set; }
-
-    public string Message { get; set; }
+    public PaymentDetailState State { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -18,5 +16,5 @@ public class PaymentDetail
 
     public string Request { get; set; }
 
-    public string Response { get; set; }
+    public string? Response { get; set; }
 }

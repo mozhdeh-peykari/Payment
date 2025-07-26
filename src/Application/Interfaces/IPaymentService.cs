@@ -5,7 +5,7 @@ namespace Application.Interfaces;
 
 public interface IPaymentService
 {
-    Task<string> GetTokenAsync(GetTokenRequest model);
+    Task<GetTokenResponse> GetTokenAsync(GetTokenRequest model);
 
     Task<VerifyResponse> Verify(VerifyRequest model);
 }

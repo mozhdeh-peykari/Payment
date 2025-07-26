@@ -3,9 +3,9 @@ using Application.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Application;
+namespace Application.Extensions;
 
-public static class Extensions
+public static class ServiceExtensions
 {
     public static void AddApplicationServices(this WebApplicationBuilder builder)
     {

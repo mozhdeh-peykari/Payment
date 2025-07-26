@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Domain.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Presentation.Models;
 using Presentation.Models.Payment;
 
 namespace Presentation.Controllers;
@@ -39,31 +40,41 @@ public class PaymentController : Controller
             ReturnUrl = _settings.CallbackUrl
         };
 
-        var token = await _paymentService.GetTokenAsync(tokenRequest);
+        var response = await _paymentService.GetTokenAsync(tokenRequest);
 
-        if (string.IsNullOrEmpty(token))
+        if (!response.IsSuccessful)
         {
-            return Content("Token generation failed");
+            return View("Error", new ErrorViewModel
+            {
+                ErrorCode = response.ErrorCode,
+                ErrorMessage = response.ErrorMessage
+            });
         }
 
         return View("RedirectToGateway", new RedirectToGatewayModel
         {
             CallbackUrl = _settings.CallbackUrl,
-            Token = token
+            Token = response.Result
         });
     }
 
     [HttpPost]
     public async Task<ActionResult> Verify(VerifyRequest model)
     {
-        if (!ModelState.IsValid)
-            return View("Index", model);
-
         var result = await _paymentService.Verify(model);
+
+        if (!result.IsSuccessful)
+        {
+            return View("Error", new ErrorViewModel
+            {
+                ErrorCode = result.ErrorCode,
+                ErrorMessage = result.ErrorMessage
+            });
+        }
 
         var dto = new VerifyResultModel
         {
-            PaymentStatus = result.PaymentState.ToString(),
+            PaymentStatus = result.Result.PaymentState.ToString(),
         };
 
         return View("VerifyResult", dto);

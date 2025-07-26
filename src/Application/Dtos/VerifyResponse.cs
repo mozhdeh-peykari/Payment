@@ -2,11 +2,11 @@
 
 namespace Application.Dtos;
 
-public class VerifyResponse
+public class VerifyResponse : ResponseDto<VerifyResult>
+{
+}
+
+public class VerifyResult
 {
     public PaymentState PaymentState { get; set; }
-
-    public DateTime TransactionDate { get; set; }
-
-    public decimal Amount { get; set; }
 }

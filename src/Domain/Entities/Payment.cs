@@ -24,7 +24,7 @@ namespace Domain.Entities
 
         public decimal  Amount { get; private set; }
 
-        public PaymentState PaymentState { get; private set; } //
+        public PaymentState PaymentState { get; set; }
 
         public string RequestId { get; private set; }
 
@@ -39,6 +39,8 @@ namespace Domain.Entities
         public string AcceptorId { get; private set; }
 
         public PaymentType Type { get; set; }
+
+        public int ErrorCode { get; set; }
 
         //public List<PaymentDetail> Events { get; private set; } = [];
         /*
