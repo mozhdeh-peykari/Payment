@@ -1,16 +1,11 @@
 ﻿using Application.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Infrastructure.ExternalServices.IranKish.Dtos;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IPaymentService
 {
-    public interface IPaymentService
-    {
-        Task<string> GetTokenAsync(GetTokenRequest request);
+    Task<string> GetTokenAsync(GetTokenRequest model);
 
-        Task<VerifyResponse> Verify(VerifyRequest model);
-    }
+    Task<VerifyResponse> Verify(VerifyRequest model);
 }

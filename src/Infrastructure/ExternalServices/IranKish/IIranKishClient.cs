@@ -7,4 +7,6 @@ public interface IIranKishClient
     Task<TokenResponse> GetTokenAsync(TokenRequest req);
 
     Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req);
+
+    bool IsSuccessful(string responseCode);
 }

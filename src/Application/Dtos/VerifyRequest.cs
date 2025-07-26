@@ -14,7 +14,7 @@ namespace Application.Dtos
 
         public string? AcceptorId { get; set; }
 
-        public string? ResponseCode { get; set; }
+        public string? PayResponseCode { get; set; }
 
         public string? Amount { get; set; }
 

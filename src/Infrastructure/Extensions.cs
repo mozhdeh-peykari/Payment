@@ -1,4 +1,5 @@
 ﻿using Infrastructure.ExternalServices.IranKish;
+using Infrastructure.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +9,8 @@ public static class Extensions
 {
     public static void AddInfrastructureServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IIranKishClient, IranKishClient>();
         builder.Services.AddHttpClient();
+        builder.Services.AddScoped<IIranKishClient, IranKishClient>();
+        builder.Services.AddScoped<ILogger, SerilogLogger>();
     }
 }

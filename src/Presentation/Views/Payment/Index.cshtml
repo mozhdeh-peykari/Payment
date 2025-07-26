@@ -8,7 +8,8 @@
 {
     <div>
         @Html.LabelFor(m => m.Amount)
-        @Html.TextBoxFor(m => m.Amount, new { @class = "form-control" })
+        @* @Html.TextBoxFor(m => m.Amount, new { @class = "form-control", Value = "100" }) *@
+        <input class="form-control" data-val="true" data-val-required="The Amount field is required." id="Amount" name="Amount" type="text" value="100">
         @Html.ValidationMessageFor(m => m.Amount)
     </div>
     <br />

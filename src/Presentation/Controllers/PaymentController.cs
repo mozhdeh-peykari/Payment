@@ -22,6 +22,9 @@ public class PaymentController : Controller
     [HttpPost]
     public async Task<ActionResult> StartPayment(PaymentInputModel model)
     {
+        //test
+        //return View("RedirectToGateway", "981AFD2D2830D3478F357B9CABC8B82D0523");
+
         if (!ModelState.IsValid)
             return View("Index", model);
 
@@ -38,7 +41,7 @@ public class PaymentController : Controller
             return Content("Token generation failed");
         }
 
-        return View("RedirectToGateway");
+        return View("RedirectToGateway", token);
     }
 
     [HttpPost]
@@ -52,21 +55,21 @@ public class PaymentController : Controller
         string retrievalReferenceNumber = Request.Form["retrievalReferenceNumber"];
         string systemTraceAuditNumber = Request.Form["systemTraceAuditNumber"];
 
-        if (string.IsNullOrEmpty(token))
-        {
-            throw new ArgumentNullException(nameof(token));
-        }
-        if (string.IsNullOrEmpty(requestId))
-        {
-            throw new ArgumentNullException(nameof(requestId));
-        }
+        //if (string.IsNullOrEmpty(token))
+        //{
+        //    throw new ArgumentNullException(nameof(token));
+        //}
+        //if (string.IsNullOrEmpty(requestId))
+        //{
+        //    throw new ArgumentNullException(nameof(requestId));
+        //}
 
         var request = new VerifyRequest
         {
             Token = token,
             RequestId = requestId,
             AcceptorId = acceptorId,
-            ResponseCode = responseCode,
+            PayResponseCode = responseCode,
             Amount = amount,
             RetrievalReferenceNumber = retrievalReferenceNumber,
             SystemTraceAuditNumber = systemTraceAuditNumber

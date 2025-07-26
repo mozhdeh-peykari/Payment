@@ -1,8 +1,5 @@
-﻿@page
-@model Presentation.Views.Payment.RedirectToGatewayModel
+﻿@model string
 @{
-    Layout = null;
-    var token = ViewBag.Token as string;
 }
 
 <!DOCTYPE html>
@@ -12,7 +9,7 @@
 </head>
 <body onload="document.forms[0].submit()">
     <form action="https://ikc.shaparak.ir/iuiv3/IPG/Index" method="post">
-        <input type="hidden" name="tokenIdentity" value="@token" />
+        <input type="hidden" name="tokenIdentity" value="@Model" />
     </form>
 </body>
 </html>

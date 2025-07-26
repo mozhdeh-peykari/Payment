@@ -8,7 +8,7 @@ public class VerifyResponse
 
     public DateTime TransactionDate { get; set; }
 
-    public int Amount { get; set; }
+    public decimal Amount { get; set; }
 
     public bool IsSuccessful()
     {

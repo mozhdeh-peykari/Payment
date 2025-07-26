@@ -4,16 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure.ExternalServices.IranKish.Dtos
+namespace Infrastructure.ExternalServices.IranKish.Dtos;
+
+public class ConfirmResponse : GeneralResponse<ConfirmResponseDetails>
 {
-    public class ConfirmResponse
-    {
-        public string responseCode { get; set; }
+}
 
-        public int transactionDate { get; set; }
+public class ConfirmResponseDetails
+{
+    public string responseCode { get; set; }
 
-        public int transactionTime { get; set; }
+    public int transactionDate { get; set; }
 
-        public int amount { get; set; }
-    }
+    public int transactionTime { get; set; }
+
+    public int amount { get; set; }
 }

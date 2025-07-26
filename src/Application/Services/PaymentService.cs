@@ -7,6 +7,7 @@ using Domain.Settings;
 using Infrastructure.ExternalServices.IranKish;
 using Infrastructure.ExternalServices.IranKish.Dtos;
 using Infrastructure.ExternalServices.IranKish.Helpers;
+using Infrastructure.Logging;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Json;
@@ -18,14 +19,17 @@ public class PaymentService : IPaymentService
     private readonly PaymentServiceSettings _settings;
     private readonly IIranKishClient _client;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger _logger;
 
     public PaymentService(IOptions<PaymentServiceSettings> settings,
         IIranKishClient client,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger logger)
     {
         _settings = settings.Value;
         _client = client;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<string> GetTokenAsync(GetTokenRequest model)
@@ -65,61 +69,63 @@ public class PaymentService : IPaymentService
         //call api
         var response = await _client.GetTokenAsync(tokenRequest);
 
-        //validate token
-        //update db
-        if (response?.status ?? false)
-        {
-            var token = response.result?.ToString();
-            transaction.Tokenized(token, JsonSerializer.Serialize(tokenRequest));
-            await _unitOfWork.Transactions.SaveAsync();
-
-            return token;
-        }
-        else
+        if (response == null || !response.status)
         {
             transaction.TokenGenerationFailed(JsonSerializer.Serialize(tokenRequest));
             await _unitOfWork.SaveAsync();
 
-            return null;
-        }
-    }
-
-    public bool IsTokenValid(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return false;
+            _logger.Error($"[PaymentService].[GetTokenAsync], Token generation failed");
+            throw new Exception($"Token generation failed");
         }
 
-        return true;
+        var token = response.result?.ToString();
+        transaction.Tokenized(token, JsonSerializer.Serialize(tokenRequest));
+        await _unitOfWork.Transactions.SaveAsync();
+
+        return token;
     }
 
     public async Task<VerifyResponse> Verify(VerifyRequest model)
     {
-        if (!model.IsValid())
-        {
-
-        }
-
         //get transaction
-        var transaction = await _unitOfWork.Transactions.GetFirstOrDefaultAsync(x => x.Token == model.Token && x.RequestId == model.RequestId);
+        //test:
+        var transaction = await _unitOfWork.Transactions.GetFirstOrDefaultAsync(x => 1 == 1);
+        //var resp = new VerifyResponse
+        //{
+        //    PaymentStatus = transaction.PaymentStatus,
+        //    Amount = transaction.Amount,
+        //    TransactionDate = transaction.CreatedDate
+        //};
+        //return resp;
+        //var transaction = await _unitOfWork.Transactions.GetFirstOrDefaultAsync(x => x.Token == model.Token && x.RequestId == model.RequestId);
+
+        //validations
         if (transaction == null)
         {
-            //log
+            _logger.Error($"[PaymentService].[Verify], Transaction not found. Token: {model.Token}, RequestId: {model.RequestId}");
             throw new Exception($"Transaction not found. Token: {model.Token}, RequestId: {model.RequestId}");
         }
 
-        //map response code
-        if (!model.IsSuccessful())
+        if (transaction.PaymentStatus != PaymentStatus.Pending)
+        {
+            _logger.Error($"[PaymentService].[Verify], Invalid payment status. Token: {model.Token}, RequestId: {model.RequestId}, PaymentStatus: {transaction.PaymentStatus}");
+            throw new Exception($"Invalid payment status. Token: {model.Token}, RequestId: {model.RequestId}, PaymentStatus: {transaction.PaymentStatus}");
+        }
+
+        if (!_client.IsSuccessful(model.PayResponseCode))
         {
             transaction.PaymentFailed(parameters: JsonSerializer.Serialize(model));
-            //log
+            await _unitOfWork.SaveAsync();
+
+            _logger.Error($"[PaymentService].[Verify], Payment failed. Token: {model.Token}, RequestId: {model.RequestId}");
             throw new Exception($"Payment failed. TransactionId: {transaction.Id}");
         }
 
+        //set as paid
         transaction.Paid(parameters: JsonSerializer.Serialize(model));
         await _unitOfWork.SaveAsync();
 
+        //confirm
         var request = new ConfirmRequest
         {
             terminalId = _settings.TerminalId,
@@ -130,24 +136,29 @@ public class PaymentService : IPaymentService
 
         var response = await _client.ConfirmAsync(request);
 
-        //map response code to status
-        var res = new VerifyResponse
+        if (response == null || response.result == null)
         {
-            PaymentStatus = transaction.PaymentStatus, //?
-            Amount = response.amount,
-            TransactionDate = DateTime.ParseExact($"{response.transactionDate:D8}{response.transactionTime:D6}", "yyyyMMddHHmmss", CultureInfo.InvariantCulture)
-        };
+            return null;
+        }
 
-        if (!res.IsSuccessful())
+        if (!response.status)
         {
             transaction.VerificationFailed(parameters: JsonSerializer.Serialize(model));
             await _unitOfWork.SaveAsync();
-            //log
+
+            _logger.Error($"[PaymentService].[Verify], Verification failed. Token: {model.Token}, RequestId: {model.RequestId}");
             throw new Exception($"Verification failed. TransactionId: {transaction.Id}");
         }
 
         transaction.Verified(parameters: JsonSerializer.Serialize(model));
         await _unitOfWork.SaveAsync();
+
+        var res = new VerifyResponse
+        {
+            PaymentStatus = transaction.PaymentStatus,
+            Amount = response.result.amount,
+            TransactionDate = DateTime.ParseExact($"{response.result.transactionDate:D8}{response.result.transactionTime:D6}", "yyyyMMddHHmmss", CultureInfo.InvariantCulture)
+        };
 
         return res;
     }
