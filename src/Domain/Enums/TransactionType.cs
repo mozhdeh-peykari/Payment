@@ -1,6 +1,6 @@
 ﻿namespace Domain.Enums;
 
-public enum TransactionType
+public enum PaymentType
 {
     Purchase,
 

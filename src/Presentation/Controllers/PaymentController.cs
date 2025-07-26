@@ -1,6 +1,8 @@
 ﻿using Application.Dtos;
 using Application.Interfaces;
+using Domain.Settings;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Presentation.Models.Payment;
 
 namespace Presentation.Controllers;
@@ -8,10 +10,13 @@ namespace Presentation.Controllers;
 public class PaymentController : Controller
 {
     private readonly IPaymentService _paymentService;
+    private readonly PaymentServiceSettings _settings;
 
-    public PaymentController(IPaymentService paymentService)
+    public PaymentController(IPaymentService paymentService,
+        IOptions<PaymentServiceSettings> settings)
     {
         _paymentService = paymentService;
+        _settings = settings.Value;
     }
 
     public ActionResult Index()
@@ -31,7 +36,7 @@ public class PaymentController : Controller
         var tokenRequest = new GetTokenRequest
         {
             Amount = model.Amount,
-            ReturnUrl = "https://localhost:7190/Payment/Verify"
+            ReturnUrl = _settings.CallbackUrl
         };
 
         var token = await _paymentService.GetTokenAsync(tokenRequest);
@@ -41,44 +46,24 @@ public class PaymentController : Controller
             return Content("Token generation failed");
         }
 
-        return View("RedirectToGateway", token);
+        return View("RedirectToGateway", new RedirectToGatewayModel
+        {
+            CallbackUrl = _settings.CallbackUrl,
+            Token = token
+        });
     }
 
     [HttpPost]
-    public async Task<ActionResult> Verify()
+    public async Task<ActionResult> Verify(VerifyRequest model)
     {
-        string token = Request.Form["token"];
-        string requestId = Request.Form["requestId"];
-        string acceptorId = Request.Form["acceptorId"];
-        string responseCode = Request.Form["responseCode"];
-        string amount = Request.Form["amount"];
-        string retrievalReferenceNumber = Request.Form["retrievalReferenceNumber"];
-        string systemTraceAuditNumber = Request.Form["systemTraceAuditNumber"];
+        if (!ModelState.IsValid)
+            return View("Index", model);
 
-        //if (string.IsNullOrEmpty(token))
-        //{
-        //    throw new ArgumentNullException(nameof(token));
-        //}
-        //if (string.IsNullOrEmpty(requestId))
-        //{
-        //    throw new ArgumentNullException(nameof(requestId));
-        //}
-
-        var request = new VerifyRequest
-        {
-            Token = token,
-            RequestId = requestId,
-            AcceptorId = acceptorId,
-            PayResponseCode = responseCode,
-            Amount = amount,
-            RetrievalReferenceNumber = retrievalReferenceNumber,
-            SystemTraceAuditNumber = systemTraceAuditNumber
-        };
-        var result = await _paymentService.Verify(request);
+        var result = await _paymentService.Verify(model);
 
         var dto = new VerifyResultModel
         {
-            PaymentStatus = result.PaymentStatus.ToString(),
+            PaymentStatus = result.PaymentState.ToString(),
         };
 
         return View("VerifyResult", dto);

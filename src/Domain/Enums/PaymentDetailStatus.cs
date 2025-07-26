@@ -1,6 +1,6 @@
 ﻿namespace Domain.Enums;
 
-public enum TransactionEventType
+public enum PaymentDetailStatus
 {
     Initiated,
 

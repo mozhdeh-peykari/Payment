@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Domain.Entities
 {
-    public class PaymentTransaction
+    public class Payment
     {
-        public PaymentTransaction(decimal amount,
+        public Payment(decimal amount,
             string terminalId,
             string acceptorId,
-            TransactionType type)
+            PaymentType type)
         {
             Amount = amount;
             TerminalId = terminalId;
             AcceptorId = acceptorId;
             Type = type;
-            PaymentStatus = PaymentStatus.Init;
+            PaymentState = PaymentState;
             RequestId = Guid.NewGuid().ToString("N").Substring(0, 20);
             CreatedDate = DateTime.UtcNow;
             Token = string.Empty;
@@ -24,7 +24,7 @@ namespace Domain.Entities
 
         public decimal  Amount { get; private set; }
 
-        public PaymentStatus PaymentStatus { get; private set; } //
+        public PaymentState PaymentState { get; private set; } //
 
         public string RequestId { get; private set; }
 
@@ -38,17 +38,17 @@ namespace Domain.Entities
 
         public string AcceptorId { get; private set; }
 
-        public TransactionType Type { get; set; }
+        public PaymentType Type { get; set; }
 
-        public List<TransactionEvent> Events { get; private set; } = [];
-
+        //public List<PaymentDetail> Events { get; private set; } = [];
+        /*
         public void Tokenized(string token, string parameters)
         {
             Token = token;
-            PaymentStatus = PaymentStatus.Pending;
-            Events.Add(new TransactionEvent
+            PaymentState = PaymentState.Pending;
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.TokenGenerated,
+                EventType = PaymentDetailStatus.TokenGenerated,
                 Message = "Token is generated",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
@@ -57,9 +57,9 @@ namespace Domain.Entities
 
         public void TokenGenerationFailed(string parameters)
         {
-            Events.Add(new TransactionEvent
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.TokenGenerationFailed,
+                EventType = PaymentDetailStatus.TokenGenerationFailed,
                 Message = "Token generation failed",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
@@ -68,10 +68,10 @@ namespace Domain.Entities
 
         public void Paid(string parameters)
         {
-            PaymentStatus = PaymentStatus.Paid;
-            Events.Add(new TransactionEvent
+            PaymentState = PaymentState.Paid;
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.ReturnedFromGateway,
+                EventType = PaymentDetailStatus.ReturnedFromGateway,
                 Message = "Returned from gateway",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
@@ -80,21 +80,21 @@ namespace Domain.Entities
 
         public void PaymentFailed(string parameters)
         {
-            PaymentStatus = PaymentStatus.Failed;
-            Events.Add(new TransactionEvent
+            PaymentState = PaymentState.Failed;
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.ReturnedFromGateway,
+                EventType = PaymentDetailStatus.ReturnedFromGateway,
                 Message = "Returned from gateway",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
             });
         }
 
-        public void AddEvent(TransactionEventType eventType,
+        public void AddEvent(PaymentDetailStatus eventType,
             string message,
             string parameters)
         {
-            Events.Add(new TransactionEvent
+            Events.Add(new PaymentDetail
             {
                 EventType = eventType,
                 Message = message,
@@ -105,10 +105,10 @@ namespace Domain.Entities
 
         public void VerificationFailed(string parameters)
         {
-            PaymentStatus = PaymentStatus.Failed;
-            Events.Add(new TransactionEvent
+            PaymentState = PaymentState.Failed;
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.VerificationFailed,
+                EventType = PaymentDetailStatus.VerificationFailed,
                 Message = "Verification failed",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
@@ -117,14 +117,15 @@ namespace Domain.Entities
 
         public void Verified(string parameters)
         {
-            PaymentStatus = PaymentStatus.Verified;
-            Events.Add(new TransactionEvent
+            //PaymentState = PaymentState.Verified;
+            Events.Add(new PaymentDetail
             {
-                EventType = TransactionEventType.Verified,
+                EventType = PaymentDetailStatus.Verified,
                 Message = "Verified successfully",
                 CreatedAt = DateTime.UtcNow,
                 Params = parameters
             });
         }
+        */
     }
 }

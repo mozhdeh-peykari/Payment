@@ -17,5 +17,7 @@
         public string AcceptorId { get; set; }
 
         public string PublicKey { get; set; }
+
+        public string CallbackUrl { get; set; }
     }
 }

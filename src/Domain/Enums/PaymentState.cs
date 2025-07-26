@@ -1,14 +1,10 @@
 ﻿namespace Domain.Enums
 {
-    public enum PaymentStatus
+    public enum PaymentState
     {
-        Init,
-
         Pending,
 
         Paid,
-
-        Verified,
 
         Failed
     }
