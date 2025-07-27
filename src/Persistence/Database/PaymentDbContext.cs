@@ -8,9 +8,9 @@ public class PaymentDbContext : DbContext
     public PaymentDbContext(DbContextOptions<PaymentDbContext> options)
         : base(options) { }
 
-    public DbSet<Payment> PaymentTransactions { get; set; }
+    public DbSet<Payment> Payments { get; set; }
 
-    public DbSet<PaymentDetail> TransactionEvents { get; set; }
+    public DbSet<PaymentDetail> PaymentDetails { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,4 +1,4 @@
-﻿@model string
+﻿@model Presentation.Models.Payment.RedirectToGatewayModel
 @{
 }
 
@@ -8,8 +8,8 @@
     <title>Redirecting...</title>
 </head>
 <body onload="document.forms[0].submit()">
-    <form action="https://ikc.shaparak.ir/iuiv3/IPG/Index" method="post">
-        <input type="hidden" name="tokenIdentity" value="@Model" />
+    <form action="@Model.RedirctToGatewayUrl" method="post">
+        <input type="hidden" name="tokenIdentity" value="@Model.Token" />
     </form>
 </body>
 </html>

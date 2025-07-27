@@ -8,9 +8,8 @@ using Domain.Settings;
 using Infrastructure.ExternalServices.IranKish;
 using Infrastructure.ExternalServices.IranKish.Dtos;
 using Infrastructure.ExternalServices.IranKish.Helpers;
-using Infrastructure.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Globalization;
 using System.Text.Json;
 
 namespace Application.Services;
@@ -20,12 +19,12 @@ public class PaymentService : IPaymentService
     private readonly PaymentServiceSettings _settings;
     private readonly IIranKishClient _client;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger _logger;
+    private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(IOptions<PaymentServiceSettings> settings,
         IIranKishClient client,
         IUnitOfWork unitOfWork,
-        ILogger logger)
+        ILogger<PaymentService> logger)
     {
         _settings = settings.Value;
         _client = client;
@@ -35,19 +34,10 @@ public class PaymentService : IPaymentService
 
     public async Task<GetTokenResponse> GetTokenAsync(GetTokenRequest model)
     {
-        //generate auth envelope
         var envelope = CryptoHelper.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
 
-        //init payment into db
-        var payment = new Payment(amount: model.Amount,
-            terminalId: _settings.TerminalId,
-            acceptorId: _settings.AcceptorId,
-            type: PaymentType.Purchase);
-
-        await _unitOfWork.Payments.AddAsync(payment);
-        await _unitOfWork.SaveAsync();
-
-        //prepare req
+        //req
+        var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
         var tokenRequest = new TokenRequest
         {
             authenticationEnvelope = new AuthenticationEnvelope
@@ -57,15 +47,30 @@ public class PaymentService : IPaymentService
             },
             request = new Request
             {
-                transactionType = payment.Type.ToString(),
+                transactionType = TransactionType.Purchase.ToString(),
                 terminalId = _settings.TerminalId,
                 acceptorId = _settings.AcceptorId,
                 amount = model.Amount,
                 revertUri = model.ReturnUrl,
-                requestId = payment.RequestId,
+                requestId = requestId,
                 requestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             }
         };
+
+        //db
+        var payment = new Payment
+        {
+            Amount = model.Amount,
+            TerminalId = _settings.TerminalId,
+            AcceptorId = _settings.AcceptorId,
+            Type = TransactionType.Purchase,
+            CreatedDate = DateTime.UtcNow,
+            RequestId = requestId,
+            PaymentState = PaymentState.Pending
+        };
+
+        await _unitOfWork.Payments.AddAsync(payment);
+        await _unitOfWork.SaveAsync();
 
         var paymentDetail = new PaymentDetail
         {
@@ -75,69 +80,87 @@ public class PaymentService : IPaymentService
             State = PaymentDetailState.TokenGeneration,
             IsSuccessful = false,
         };
-        
         await _unitOfWork.PaymentDetails.AddAsync(paymentDetail);
         await _unitOfWork.SaveAsync();
 
-        //call api
+        //api
         var response = await _client.GetTokenAsync(tokenRequest);
 
+        if (response == null)
+        {
+            var errorMessage = GlobalExceptions.ExternalServiceError.GetDescription();
+            var errorCode = (int)GlobalExceptions.ExternalServiceError;
+
+            payment.PaymentState = PaymentState.Failed;
+            payment.ErrorCode = errorCode;
+            _unitOfWork.Payments.Update(payment);
+            await _unitOfWork.SaveAsync();
+
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
+            return new GetTokenResponse
+            {
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
+                IsSuccessful = false,
+            };
+        }
+
+        //save response
         paymentDetail.IsSuccessful = response.isSuccessful;
         paymentDetail.Response = JsonSerializer.Serialize(response);
         _unitOfWork.PaymentDetails.Update(paymentDetail);
         await _unitOfWork.SaveAsync();
 
-        //await _unitOfWork.PaymentDetails.AddAsync(new PaymentDetail
-        //{
-        //    CreatedAt = DateTime.UtcNow,
-        //    PaymentId = payment.Id,
-        //    Request = JsonSerializer.Serialize(tokenRequest),
-        //    State = PaymentDetailState.TokenGeneration,
-        //    IsSuccessful = false,
-        //});
-
-        if (response == null || response.result == null || !response.status)
+        //check status
+        if (response.status)
         {
-            //payment.TokenGenerationFailed(JsonSerializer.Serialize(tokenRequest));
-            //await _unitOfWork.SaveAsync();
+            payment.Token = response.result.token;
+            _unitOfWork.Payments.Update(payment);
+            await _unitOfWork.SaveAsync();
 
-            _logger.Error($"[PaymentService].[GetTokenAsync], Token generation failed");
             return new GetTokenResponse
             {
-                ErrorCode = "",
-                ErrorMessage = "",
+                IsSuccessful = true,
+                Result = response.result.token,
+            };
+        }
+        else
+        {
+            var errorCode = (int)GlobalExceptions.TokenGenerationFailed;
+            var errorMessage = GlobalExceptions.TokenGenerationFailed.GetDescription();
+
+            payment.PaymentState = PaymentState.Failed;
+            payment.ErrorCode = errorCode;
+            _unitOfWork.Payments.Update(payment);
+            await _unitOfWork.SaveAsync();
+
+            _logger.LogError($"{errorMessage}, Request: {tokenRequest}, Response: {response}");
+            return new GetTokenResponse
+            {
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
-            //throw new Exception($"Token generation failed");
         }
-
-        //var token = response.result?.ToString();
-        //payment.Tokenized(token, JsonSerializer.Serialize(tokenRequest));
-        //await _unitOfWork.Transactions.SaveAsync();
-
-        return new GetTokenResponse
-        {
-            IsSuccessful = true,
-            Result = response.result,
-        };
     }
 
     public async Task<VerifyResponse> Verify(VerifyRequest model)
     {
         var payment = await _unitOfWork.Payments.GetFirstOrDefaultAsync(x => x.Token == model.Token && x.RequestId == model.RequestId);
 
-        //validations
         if (payment == null)
         {
-            _logger.Error($"Transaction not found. VerifyRequest: {JsonSerializer.Serialize(model)}");
+            var errorMessage = GlobalExceptions.PaymentNotFound.GetDescription();
+            _logger.LogError($"{errorMessage}, VerifyRequest: {JsonSerializer.Serialize(model)}");
             return new VerifyResponse
             {
-                ErrorCode = "",
-                ErrorMessage = "",
+                ErrorCode = (int)GlobalExceptions.PaymentNotFound,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
         }
 
+        //save request
         var paymentDetail = new PaymentDetail
         {
             CreatedAt = DateTime.UtcNow,
@@ -149,46 +172,54 @@ public class PaymentService : IPaymentService
         await _unitOfWork.PaymentDetails.AddAsync(paymentDetail);
         await _unitOfWork.SaveAsync();
 
+        //validations
         if (payment.PaymentState != PaymentState.Pending)
         {
+            var errorMessage = GlobalExceptions.InvalidState.GetDescription();
+            var errorCode = (int)GlobalExceptions.InvalidState;
             payment.PaymentState = PaymentState.Failed;
-            payment.ErrorCode = (int)GlobalExceptions.InvalidStatus;
+            payment.ErrorCode = errorCode;
             await _unitOfWork.SaveAsync();
 
-            _logger.Error($"Invalid payment state. PaymentId: {payment.Id}");
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
             return new VerifyResponse
             {
-                ErrorCode = (int)GlobalExceptions.InvalidStatus,
-                ErrorMessage = GlobalExceptions.InvalidStatus.GetDescription(),
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
         }
-        if (payment.Amount != payment.Amount)
+        if (payment.Amount.ToString() != model.Amount)
         {
+            var errorMessage = GlobalExceptions.InvalidAmount.GetDescription();
+            var errorCode = (int)GlobalExceptions.InvalidAmount;
+
             payment.PaymentState = PaymentState.Failed;
-            payment.ErrorCode = "";
+            payment.ErrorCode = errorCode;
             await _unitOfWork.SaveAsync();
 
-            _logger.Error($"Invalid amount. PaymentId: {payment.Id}");
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
             return new VerifyResponse
             {
-                ErrorCode = "",
-                ErrorMessage = "",
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
         }
 
-        if (!_client.IsSuccessful(model.PayResponseCode))
+        if (!_client.IsSuccessful(model.ResponseCode))
         {
+            var errorMessage = GlobalExceptions.PaymentFailed.GetDescription();
+            var errorCode = (int)GlobalExceptions.PaymentFailed;
             payment.PaymentState = PaymentState.Failed;
-            payment.ErrorCode = "";
+            payment.ErrorCode = errorCode;
             await _unitOfWork.SaveAsync();
 
-            _logger.Error($"Payment failed. PaymentId: {payment.Id}");
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
             return new VerifyResponse
             {
-                ErrorCode = "",
-                ErrorMessage = "",
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
         }
@@ -209,6 +240,7 @@ public class PaymentService : IPaymentService
             systemTraceAuditNumber = model.SystemTraceAuditNumber
         };
 
+        //save
         var confirmDetail = new PaymentDetail
         {
             CreatedAt = DateTime.UtcNow,
@@ -217,39 +249,71 @@ public class PaymentService : IPaymentService
             Request = JsonSerializer.Serialize(request),
             State = PaymentDetailState.Verification,
         };
+        _unitOfWork.PaymentDetails.Update(confirmDetail);
         await _unitOfWork.SaveAsync();
 
+        //api
         var response = await _client.ConfirmAsync(request);
 
-        if (!response.isSuccessful)
+        if (response == null)
         {
+            var errorMessage = GlobalExceptions.ExternalServiceError.GetDescription();
+            var errorCode = (int)GlobalExceptions.ExternalServiceError;
+
             payment.PaymentState = PaymentState.Failed;
-            payment.ErrorCode = "";
-            confirmDetail.Response = JsonSerializer.Serialize(response);
+            payment.ErrorCode = errorCode;
+            _unitOfWork.Payments.Update(payment);
             await _unitOfWork.SaveAsync();
 
-            _logger.Error($"Payment failed. PaymentId: {payment.Id}");
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
             return new VerifyResponse
             {
-                ErrorCode = "",
-                ErrorMessage = "",
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
                 IsSuccessful = false,
             };
         }
 
-        payment.PaymentState = PaymentState.Paid;
-        confirmDetail.Response = JsonSerializer.Serialize(response);
-        await _unitOfWork.SaveAsync();
-
-        var res = new VerifyResponse
+        if(response.isSuccessful)
         {
-            IsSuccessful = true,
-            Result = new VerifyResult
-            {
-                PaymentState = PaymentState.Paid
-            }
-        };
+            payment.PaymentState = PaymentState.Paid;
+            confirmDetail.Response = JsonSerializer.Serialize(response);
+            confirmDetail.IsSuccessful = true;
+            paymentDetail.IsSuccessful = true;
+            _unitOfWork.PaymentDetails.Update(confirmDetail);
+            _unitOfWork.PaymentDetails.Update(paymentDetail);
+            await _unitOfWork.SaveAsync();
 
-        return res;
+            var res = new VerifyResponse
+            {
+                IsSuccessful = true,
+                Result = new VerifyResult
+                {
+                    PaymentState = PaymentState.Paid
+                }
+            };
+
+            return res;
+        }
+        else
+        {
+            var errorMessage = GlobalExceptions.VerificationFailed.GetDescription();
+            var errorCode = (int)GlobalExceptions.VerificationFailed;
+
+            payment.PaymentState = PaymentState.Failed;
+            payment.ErrorCode = errorCode;
+            confirmDetail.Response = JsonSerializer.Serialize(response);
+            _unitOfWork.Payments.Update(payment);
+            _unitOfWork.PaymentDetails.Update(confirmDetail);
+            await _unitOfWork.SaveAsync();
+
+            _logger.LogError($"{errorMessage}, PaymentId: {payment.Id}");
+            return new VerifyResponse
+            {
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
+                IsSuccessful = false,
+            };
+        }
     }
 }

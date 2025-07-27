@@ -14,9 +14,7 @@ public class ConfirmResponseDetails
 {
     public string responseCode { get; set; }
 
-    public int transactionDate { get; set; }
+    public DateTime transactionDateTime { get; set; }
 
-    public int transactionTime { get; set; }
-
-    public int amount { get; set; }
+    public string amount { get; set; }
 }

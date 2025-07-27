@@ -4,6 +4,6 @@
     {
         public string Token { get; set; }
 
-        public string CallbackUrl { get; set; }
+        public string RedirctToGatewayUrl { get; set; }
     }
 }

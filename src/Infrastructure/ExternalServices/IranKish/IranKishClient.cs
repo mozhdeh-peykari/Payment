@@ -1,87 +1,90 @@
 ﻿using Domain.Settings;
 using Infrastructure.ExternalServices.IranKish.Dtos;
-using Infrastructure.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 using System.Security;
 using System.Text.Json;
 
-namespace Infrastructure.ExternalServices.IranKish
+namespace Infrastructure.ExternalServices.IranKish;
+
+public class IranKishClient : IIranKishClient
 {
-    public class IranKishClient : IIranKishClient
+    private readonly HttpClient _httpClient;
+    private readonly PaymentServiceSettings _settings;
+    private readonly ILogger<IranKishClient> _logger;
+
+    public IranKishClient(HttpClient httpClient,
+        IOptions<PaymentServiceSettings> settings,
+        ILogger<IranKishClient> logger)
     {
-        private readonly HttpClient _httpClient;
-        private readonly PaymentServiceSettings _settings;
-        private readonly ILogger _logger;
+        _httpClient = httpClient;
+        _settings = settings.Value;
+        _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
+        _logger = logger;
 
-        public IranKishClient(HttpClient httpClient,
-            IOptions<PaymentServiceSettings> settings,
-            ILogger logger)
+        _httpClient = ConfigureHttpClientToIgnoreSsl(_httpClient);
+    }
+
+    private static HttpClient ConfigureHttpClientToIgnoreSsl(HttpClient httpClient)
+    {
+        var handler = new HttpClientHandler
         {
-            _httpClient = httpClient;
-            _settings = settings.Value;
-            _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
-            _logger = logger;
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+        };
+
+        return new HttpClient(handler)
+        {
+            BaseAddress = httpClient.BaseAddress
+        };
+    }
+
+    public async Task<TokenResponse> GetTokenAsync(TokenRequest req)
+    {
+        TokenResponse tokenResponse = null;
+        string? res = null;
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
+            res = await response.Content.ReadAsStringAsync();
+            tokenResponse = JsonSerializer.Deserialize<TokenResponse>(res);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(exception: ex, message: $"[IranKishClient].[GetTokenAsync], Request: {req}, Response: {res}");
         }
 
-        public async Task<TokenResponse> GetTokenAsync(TokenRequest req)
+        return tokenResponse;
+    }
+
+    public async Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req)
+    {
+        ConfirmResponse confirmResponse = null;
+        string? res = null;
+        try
         {
-            string? res = null;
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
-                res = await response.Content.ReadAsStringAsync();
-
-                //_logger.Info("[IranKishClient].[GetTokenAsync]", new { Request = req, Response = res });
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("[IranKishClient].[GetTokenAsync]", ex, new { Request = req, Response = res });
-            }
-
-            //if (res == null)
-            //{
-            //    return null;
-            //}
-
-            var deserialized = JsonSerializer.Deserialize<TokenResponse>(res);
-            return deserialized;
+            var response = await _httpClient.PostAsJsonAsync(_settings.Verify, req);
+            res = await response.Content.ReadAsStringAsync();
+            confirmResponse = JsonSerializer.Deserialize<ConfirmResponse>(res);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(exception: ex, message: $"[IranKishClient].[ConfirmAsync], Request: {req}, Response: {res}");
         }
 
-        public async Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req)
+        return confirmResponse;
+    }
+
+    public bool IsSuccessful(string responseCode)
+    {
+        if (responseCode == "00")
         {
-            string? res = null;
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync(_settings.Verify, req);
-                res = await response.Content.ReadAsStringAsync();
-
-                //_logger.Info("[IranKishClient].[ConfirmAsync]", new { Request = req, Response = res });
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("[IranKishClient].[ConfirmAsync]", ex, new { Request = req, Response = res });
-            }
-
-            //if (res == null)
-            //{
-            //    return null;
-            //}
-
-            var deserialized = JsonSerializer.Deserialize<ConfirmResponse>(res);
-            return deserialized;
+            return true;
         }
-
-        public bool IsSuccessful(string responseCode)
+        else
         {
-            if (responseCode == "00")
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return false;
         }
     }
 }

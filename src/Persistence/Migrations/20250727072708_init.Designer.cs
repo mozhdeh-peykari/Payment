@@ -12,7 +12,7 @@ using Persistence.Database;
 namespace Persistence.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20250722140548_init")]
+    [Migration("20250727072708_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -25,7 +25,7 @@ namespace Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Domain.Entities.PaymentTransaction", b =>
+            modelBuilder.Entity("Domain.Entities.Payment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -33,21 +33,28 @@ namespace Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AcceptorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric");
 
-                    b.Property<DateTime?>("ConfirmedTime")
+                    b.Property<DateTime?>("ConfirmedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("PaymentStatus")
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ErrorCode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentState")
                         .HasColumnType("integer");
 
                     b.Property<string>("RequestId")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<DateTime>("RequestTime")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("TerminalId")
                         .IsRequired()
@@ -57,12 +64,15 @@ namespace Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.ToTable("PaymentTransactions");
+                    b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("Domain.Entities.TransactionEvent", b =>
+            modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -73,45 +83,25 @@ namespace Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("EventType")
+                    b.Property<bool>("IsSuccessful")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PaymentId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ExternalServiceResponseCode")
+                    b.Property<string>("Request")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Message")
-                        .IsRequired()
+                    b.Property<string>("Response")
                         .HasColumnType("text");
 
-                    b.Property<string>("Params")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("PaymentTransactionId")
+                    b.Property<int>("State")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PaymentTransactionId");
-
-                    b.ToTable("TransactionEvents");
-                });
-
-            modelBuilder.Entity("Domain.Entities.TransactionEvent", b =>
-                {
-                    b.HasOne("Domain.Entities.PaymentTransaction", "PaymentTransaction")
-                        .WithMany("Events")
-                        .HasForeignKey("PaymentTransactionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PaymentTransaction");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PaymentTransaction", b =>
-                {
-                    b.Navigation("Events");
+                    b.ToTable("PaymentDetails");
                 });
 #pragma warning restore 612, 618
         }

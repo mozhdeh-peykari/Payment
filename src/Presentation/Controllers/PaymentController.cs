@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Presentation.Models;
 using Presentation.Models.Payment;
+using System.Net;
 
 namespace Presentation.Controllers;
 
@@ -28,9 +29,6 @@ public class PaymentController : Controller
     [HttpPost]
     public async Task<ActionResult> StartPayment(PaymentInputModel model)
     {
-        //test
-        //return View("RedirectToGateway", "981AFD2D2830D3478F357B9CABC8B82D0523");
-
         if (!ModelState.IsValid)
             return View("Index", model);
 
@@ -44,6 +42,7 @@ public class PaymentController : Controller
 
         if (!response.IsSuccessful)
         {
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return View("Error", new ErrorViewModel
             {
                 ErrorCode = response.ErrorCode,
@@ -53,7 +52,7 @@ public class PaymentController : Controller
 
         return View("RedirectToGateway", new RedirectToGatewayModel
         {
-            CallbackUrl = _settings.CallbackUrl,
+            RedirctToGatewayUrl = $"{_settings.BaseUrl}{_settings.RedirectToGateway}",
             Token = response.Result
         });
     }
@@ -65,6 +64,7 @@ public class PaymentController : Controller
 
         if (!result.IsSuccessful)
         {
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return View("Error", new ErrorViewModel
             {
                 ErrorCode = result.ErrorCode,
