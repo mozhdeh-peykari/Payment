@@ -2,10 +2,8 @@
 
 namespace Domain.Entities;
 
-public class PaymentDetail
+public class PaymentDetail : BaseEntity<int>
 {
-    public int Id { get; set; }
-
     public int PaymentId { get; set; }
 
     public PaymentDetailState State { get; set; }

@@ -1,11 +1,15 @@
-﻿namespace Domain.Enums
+﻿using System.ComponentModel;
+
+namespace Domain.Enums;
+
+public enum PaymentState
 {
-    public enum PaymentState
-    {
-        Pending,
+    [Description("Pending")]
+    Pending = 10,
 
-        Paid,
+    [Description("Paid")]
+    Paid = 11,
 
-        Failed
-    }
+    [Description("Failed")]
+    Failed = 12
 }

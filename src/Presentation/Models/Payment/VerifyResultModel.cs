@@ -1,7 +1,6 @@
-﻿namespace Presentation.Models.Payment
+﻿namespace Presentation.Models.Payment;
+
+public record VerifyResultModel
 {
-    public class VerifyResultModel
-    {
-        public string PaymentStatus { get; set; }
-    }
+    public string PaymentStatus { get; set; }
 }

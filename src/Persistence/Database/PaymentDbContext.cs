@@ -1,5 +1,6 @@
 ﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Persistence.EntityTypeConfigurations;
 
 namespace Persistence.Database;
 
@@ -14,9 +15,6 @@ public class PaymentDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        //modelBuilder.Entity<Payment>()
-        //    .HasMany(t => t.Events)
-        //    .WithOne(e => e.PaymentTransaction)
-        //    .HasForeignKey(e => e.PaymentTransactionId);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PaymentTypeConfiguration).Assembly);
     }
 }

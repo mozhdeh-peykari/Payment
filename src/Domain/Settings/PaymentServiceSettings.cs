@@ -19,5 +19,7 @@
         public string PublicKey { get; set; }
 
         public string CallbackUrl { get; set; }
+
+        public string TransactionType { get; set; }
     }
 }

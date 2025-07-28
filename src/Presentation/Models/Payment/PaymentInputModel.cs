@@ -2,7 +2,7 @@
 
 namespace Presentation.Models.Payment
 {
-    public class PaymentInputModel
+    public record PaymentInputModel
     {
         [Required(ErrorMessage ="Amount is required")]
         [Range(5000, long.MaxValue, ErrorMessage = "Price should be bigger than 5000")]

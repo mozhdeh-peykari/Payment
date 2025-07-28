@@ -1,6 +1,6 @@
 ﻿namespace Presentation.Models.Payment
 {
-    public class RedirectToGatewayModel
+    public record RedirectToGatewayModel
     {
         public string Token { get; set; }
 

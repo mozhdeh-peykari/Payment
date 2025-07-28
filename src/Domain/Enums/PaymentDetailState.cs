@@ -1,24 +1,15 @@
-﻿namespace Domain.Enums;
+﻿using System.ComponentModel;
+
+namespace Domain.Enums;
 
 public enum PaymentDetailState
 {
-    TokenGeneration,
+    [Description("Token generation")]
+    TokenGeneration = 20,
 
-    ReturnedFromGateway,
+    [Description("Returned from gateway")]
+    ReturnedFromGateway = 21,
 
-    Verification
-
-    //Initiated,
-
-    //TokenGenerationFailed,
-
-    //TokenGenerated,
-
-    //ReturnedFromGateway,
-
-    //VerificationFailed,
-
-    //Verified,
-
-    //Paid
+    [Description("Verification")]
+    Verification = 22
 }

@@ -47,7 +47,7 @@ public class PaymentService : IPaymentService
             },
             request = new Request
             {
-                transactionType = TransactionType.Purchase.ToString(),
+                transactionType = _settings.TransactionType,
                 terminalId = _settings.TerminalId,
                 acceptorId = _settings.AcceptorId,
                 amount = model.Amount,
@@ -62,8 +62,6 @@ public class PaymentService : IPaymentService
         {
             Amount = model.Amount,
             TerminalId = _settings.TerminalId,
-            AcceptorId = _settings.AcceptorId,
-            Type = TransactionType.Purchase,
             CreatedDate = DateTime.UtcNow,
             RequestId = requestId,
             PaymentState = PaymentState.Pending
