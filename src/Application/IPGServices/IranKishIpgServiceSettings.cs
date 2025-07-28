@@ -1,6 +1,6 @@
-﻿namespace Domain.Settings
+﻿namespace Application.IPGServices
 {
-    public class PaymentServiceSettings
+    public class IranKishIpgServiceSettings
     {
         public string BaseUrl { get; set; }
 

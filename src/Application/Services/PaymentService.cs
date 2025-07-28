@@ -1,13 +1,12 @@
-﻿using Application.Dtos;
+﻿using Application.Database;
+using Application.Dtos;
 using Application.Extensions;
 using Application.Interfaces;
+using Application.IPGServices;
+using Application.IPGServices.Dtos;
+using Application.IPGServices.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
-using Domain.Interfaces;
-using Domain.Settings;
-using Infrastructure.ExternalServices.IranKish;
-using Infrastructure.ExternalServices.IranKish.Dtos;
-using Infrastructure.ExternalServices.IranKish.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -16,44 +15,44 @@ namespace Application.Services;
 
 public class PaymentService : IPaymentService
 {
-    private readonly PaymentServiceSettings _settings;
-    private readonly IIranKishClient _client;
+    private readonly IranKishIpgServiceSettings _settings;
+    private readonly IIranKishIPGService _iranKishIpgService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<PaymentService> _logger;
 
-    public PaymentService(IOptions<PaymentServiceSettings> settings,
-        IIranKishClient client,
+    public PaymentService(IOptions<IranKishIpgServiceSettings> settings,
+        IIranKishIPGService iranKishIpgService,
         IUnitOfWork unitOfWork,
         ILogger<PaymentService> logger)
     {
         _settings = settings.Value;
-        _client = client;
+        _iranKishIpgService = iranKishIpgService;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<GetTokenResponse> GetTokenAsync(GetTokenRequest model)
     {
-        var envelope = CryptoHelper.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
+        var envelope = _iranKishIpgService.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
 
         //req
         var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
         var tokenRequest = new TokenRequest
         {
-            authenticationEnvelope = new AuthenticationEnvelope
+            AuthenticationEnvelope = new AuthenticationEnvelope
             {
-                iv = envelope.IV,
-                data = envelope.Data
+                Iv = envelope.IV,
+                Data = envelope.Data
             },
-            request = new Request
+            Request = new Request
             {
-                transactionType = _settings.TransactionType,
-                terminalId = _settings.TerminalId,
-                acceptorId = _settings.AcceptorId,
-                amount = model.Amount,
-                revertUri = model.ReturnUrl,
-                requestId = requestId,
-                requestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                TransactionType = _settings.TransactionType,
+                TerminalId = _settings.TerminalId,
+                AcceptorId = _settings.AcceptorId,
+                Amount = model.Amount,
+                RevertUri = model.ReturnUrl,
+                RequestId = requestId,
+                RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             }
         };
 
@@ -82,7 +81,7 @@ public class PaymentService : IPaymentService
         await _unitOfWork.SaveAsync();
 
         //api
-        var response = await _client.GetTokenAsync(tokenRequest);
+        var response = await _iranKishIpgService.GetTokenAsync(tokenRequest);
 
         if (response == null)
         {
@@ -104,22 +103,22 @@ public class PaymentService : IPaymentService
         }
 
         //save response
-        paymentDetail.IsSuccessful = response.isSuccessful;
+        paymentDetail.IsSuccessful = response.IsSuccessful;
         paymentDetail.Response = JsonSerializer.Serialize(response);
         _unitOfWork.PaymentDetails.Update(paymentDetail);
         await _unitOfWork.SaveAsync();
 
         //check status
-        if (response.status)
+        if (response.Status)
         {
-            payment.Token = response.result.token;
+            payment.Token = response.Result.token;
             _unitOfWork.Payments.Update(payment);
             await _unitOfWork.SaveAsync();
 
             return new GetTokenResponse
             {
                 IsSuccessful = true,
-                Result = response.result.token,
+                Result = response.Result.token,
             };
         }
         else
@@ -205,7 +204,7 @@ public class PaymentService : IPaymentService
             };
         }
 
-        if (!_client.IsSuccessful(model.ResponseCode))
+        if (!_iranKishIpgService.IsSuccessful(model.ResponseCode))
         {
             var errorMessage = GlobalExceptions.PaymentFailed.GetDescription();
             var errorCode = (int)GlobalExceptions.PaymentFailed;
@@ -232,10 +231,10 @@ public class PaymentService : IPaymentService
 
         var request = new ConfirmRequest
         {
-            terminalId = _settings.TerminalId,
-            tokenIdentity = model.Token,
-            retrievalReferenceNumber = model.RetrievalReferenceNumber,
-            systemTraceAuditNumber = model.SystemTraceAuditNumber
+            TerminalId = _settings.TerminalId,
+            TokenIdentity = model.Token,
+            RetrievalReferenceNumber = model.RetrievalReferenceNumber,
+            SystemTraceAuditNumber = model.SystemTraceAuditNumber
         };
 
         //save
@@ -251,7 +250,7 @@ public class PaymentService : IPaymentService
         await _unitOfWork.SaveAsync();
 
         //api
-        var response = await _client.ConfirmAsync(request);
+        var response = await _iranKishIpgService.ConfirmAsync(request);
 
         if (response == null)
         {
@@ -272,7 +271,7 @@ public class PaymentService : IPaymentService
             };
         }
 
-        if(response.isSuccessful)
+        if(response.IsSuccessful)
         {
             payment.PaymentState = PaymentState.Paid;
             confirmDetail.Response = JsonSerializer.Serialize(response);

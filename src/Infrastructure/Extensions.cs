@@ -16,7 +16,7 @@ public static class Extensions
         //            {
         //                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         //            });
-        builder.Services.AddScoped<IIranKishClient, IranKishClient>();
+        builder.Services.AddScoped<IIranKishClient, IranKishIPGService>();
         builder.Services.AddScoped<ILogger, SerilogLogger>();
     }
 }
