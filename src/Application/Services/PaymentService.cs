@@ -33,29 +33,16 @@ public class PaymentService : IPaymentService
 
     public async Task<GetTokenResponse> GetTokenAsync(GetTokenRequest model)
     {
-        var envelope = _iranKishIpgService.GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
-
-        //req
-        var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
-        var tokenRequest = new TokenRequest
+        var tokenRequest = new TokenRequestDto
         {
-            AuthenticationEnvelope = new AuthenticationEnvelope
-            {
-                Iv = envelope.IV,
-                Data = envelope.Data
-            },
-            Request = new Request
-            {
-                TransactionType = _settings.TransactionType,
-                TerminalId = _settings.TerminalId,
-                AcceptorId = _settings.AcceptorId,
-                Amount = model.Amount,
-                RevertUri = model.ReturnUrl,
-                RequestId = requestId,
-                RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-            }
+            Amount = model.Amount,
+            ReturnUrl = model.ReturnUrl,
+
         };
 
+        await _iranKishIpgService.GetTokenAsync(tokenRequest);
+
+        
         //db
         var payment = new Payment
         {
@@ -103,7 +90,7 @@ public class PaymentService : IPaymentService
         }
 
         //save response
-        paymentDetail.IsSuccessful = response.IsSuccessful;
+        paymentDetail.IsSuccessful = _iranKishIpgService.IsSuccessful(response.ResponseCode);
         paymentDetail.Response = JsonSerializer.Serialize(response);
         _unitOfWork.PaymentDetails.Update(paymentDetail);
         await _unitOfWork.SaveAsync();
@@ -111,14 +98,14 @@ public class PaymentService : IPaymentService
         //check status
         if (response.Status)
         {
-            payment.Token = response.Result.token;
+            payment.Token = response.Result.Token;
             _unitOfWork.Payments.Update(payment);
             await _unitOfWork.SaveAsync();
 
             return new GetTokenResponse
             {
                 IsSuccessful = true,
-                Result = response.Result.token,
+                Result = response.Result.Token,
             };
         }
         else
@@ -229,7 +216,7 @@ public class PaymentService : IPaymentService
 
         //confirm
 
-        var request = new ConfirmRequest
+        var request = new ConfirmRequestDto
         {
             TerminalId = _settings.TerminalId,
             TokenIdentity = model.Token,
@@ -271,7 +258,7 @@ public class PaymentService : IPaymentService
             };
         }
 
-        if(response.IsSuccessful)
+        if(_iranKishIpgService.IsSuccessful(response.ResponseCode))
         {
             payment.PaymentState = PaymentState.Paid;
             confirmDetail.Response = JsonSerializer.Serialize(response);

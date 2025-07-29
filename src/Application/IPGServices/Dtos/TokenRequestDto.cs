@@ -1,14 +1,14 @@
 ﻿namespace Application.IPGServices.Dtos
 {
 
-    public class TokenRequest
+    public class TokenRequestDto
     {
-        public Request Request { get; set; }
+        public RequestDto Request { get; set; }
 
-        public AuthenticationEnvelope AuthenticationEnvelope { get; set; }
+        public AuthenticationEnvelopeDto AuthenticationEnvelope { get; set; }
     }
 
-    public class Request
+    public class RequestDto
     {
         public string TransactionType { get; set; }
 

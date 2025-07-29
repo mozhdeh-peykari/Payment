@@ -1,6 +1,6 @@
 ﻿namespace Application.IPGServices.Dtos;
 
-public class AuthenticationEnvelope
+public class AuthenticationEnvelopeDto
 {
     public string Iv { get; set; }
 

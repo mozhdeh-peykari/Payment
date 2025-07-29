@@ -4,7 +4,7 @@ namespace Application.IPGServices.Interfaces;
 
 public interface IIPGService
 {
-    Task<TokenResponse> GetTokenAsync(TokenRequest req);
+    Task<TokenResponseDto> GetTokenAsync(TokenRequestDto req);
 
-    Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req);
+    Task<ConfirmResponseDto> ConfirmAsync(ConfirmRequestDto req);
 }

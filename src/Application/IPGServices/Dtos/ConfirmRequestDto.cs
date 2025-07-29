@@ -1,6 +1,6 @@
 ﻿namespace Application.IPGServices.Dtos;
 
-public class ConfirmRequest
+public class ConfirmRequestDto
 {
     public string TerminalId { get; set; }
 

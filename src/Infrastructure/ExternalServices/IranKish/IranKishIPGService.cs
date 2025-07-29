@@ -1,6 +1,6 @@
 ﻿using Application.IPGServices;
+using Application.IPGServices.Dtos;
 using Application.IPGServices.Interfaces;
-using Domain.Settings;
 using Infrastructure.ExternalServices.IranKish.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,6 +9,7 @@ using Org.BouncyCastle.Crypto.Encodings;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.OpenSsl;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -46,41 +47,87 @@ public class IranKishIPGService : IIranKishIPGService
         };
     }
 
-    public async Task<TokenResponse> GetTokenAsync(TokenRequest req)
+    public async Task<TokenResponseDto> GetTokenAsync(TokenRequestDto req)
     {
-        TokenResponse tokenResponse = null;
+        TokenResponse response = null;
+        TokenResponseDto dto = null;
         string? res = null;
+
+        //req
+        var envelope = GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
+
+        var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
+
+        var tokenRequest2 = new TokenRequestDto
+        {
+            AuthenticationEnvelope = new AuthenticationEnvelopeDto
+            {
+                Iv = envelope.IV,
+                Data = envelope.Data
+            },
+            Request = new RequestDto
+            {
+                TransactionType = _settings.TransactionType,
+                TerminalId = _settings.TerminalId,
+                AcceptorId = _settings.AcceptorId,
+                Amount = req.Amount,
+                RevertUri = req.ReturnUrl,
+                RequestId = requestId,
+                RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            }
+        };
+
+
+        
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
-            res = await response.Content.ReadAsStringAsync();
-            tokenResponse = JsonSerializer.Deserialize<TokenResponse>(res);
+            var httpResponse = await _httpClient.PostAsJsonAsync(_settings.Tokenization, req);
+            res = await httpResponse.Content.ReadAsStringAsync();
+            response = JsonSerializer.Deserialize<TokenResponse>(res);
         }
         catch (Exception ex)
         {
             _logger.LogError(exception: ex, message: $"[IranKishClient].[GetTokenAsync], Request: {req}, Response: {res}");
         }
 
-        return tokenResponse;
+        dto = new TokenResponseDto
+        {
+            Description = response.description,
+            ResponseCode  =  response.responseCode,
+            IsSuccessful = response.status,
+            Token = response.result.token
+        };
+
+        return dto;
     }
 
-    public async Task<ConfirmResponse> ConfirmAsync(ConfirmRequest req)
+    public async Task<ConfirmResponseDto> ConfirmAsync(ConfirmRequestDto req)
     {
-        ConfirmResponse confirmResponse = null;
+        ConfirmResponseDto dto = null;
+        ConfirmResponse response = null;
         string? res = null;
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(_settings.Verify, req);
-            res = await response.Content.ReadAsStringAsync();
-            confirmResponse = JsonSerializer.Deserialize<ConfirmResponse>(res);
+            var httpResponse = await _httpClient.PostAsJsonAsync(_settings.Verify, req);
+            res = await httpResponse.Content.ReadAsStringAsync();
+            response = JsonSerializer.Deserialize<ConfirmResponse>(res);
         }
         catch (Exception ex)
         {
             _logger.LogError(exception: ex, message: $"[IranKishClient].[ConfirmAsync], Request: {req}, Response: {res}");
         }
 
-        return confirmResponse;
+        dto = new ConfirmResponseDto
+        {
+            Description   =  response.description,
+            ResponseCode =  response.responseCode,
+            IsSuccessful = response.status,
+            Amount = response.result.amount,
+            Status = response.status
+        };
+
+        return dto;
     }
 
     public bool IsSuccessful(string responseCode)

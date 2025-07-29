@@ -1,6 +1,6 @@
 ﻿namespace Application.IPGServices.Dtos;
 
-public class GeneralResponse<T>
+public class GeneralResponseDto<T>
 {
     public string ResponseCode { get; set; }
 
@@ -9,6 +9,4 @@ public class GeneralResponse<T>
     public bool Status { get; set; }
 
     public T? Result { get; set; }
-
-    public bool IsSuccessful => ResponseCode == "00" ? true : false;
 }
