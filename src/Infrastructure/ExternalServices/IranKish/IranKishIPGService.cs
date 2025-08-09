@@ -54,9 +54,9 @@ public class IranKishIPGService : IIranKishIPGService
         string? res = null;
 
         //req
-        var envelope = GenerateAuthenticationEnvelope(_settings.TerminalId, model.Amount, _settings.Password, _settings.PublicKey);
+        var envelope = GenerateAuthenticationEnvelope(_settings.TerminalId, req.Request.Amount, _settings.Password, _settings.PublicKey);
 
-        var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
+        //var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
 
         var tokenRequest2 = new TokenRequestDto
         {
@@ -70,9 +70,9 @@ public class IranKishIPGService : IIranKishIPGService
                 TransactionType = _settings.TransactionType,
                 TerminalId = _settings.TerminalId,
                 AcceptorId = _settings.AcceptorId,
-                Amount = req.Amount,
-                RevertUri = req.ReturnUrl,
-                RequestId = requestId,
+                Amount = req.Request.Amount,
+                RevertUri = req.Request.RevertUri,
+                RequestId = req.Request.RequestId,
                 RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             }
         };

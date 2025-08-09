@@ -1,5 +1,4 @@
 ﻿using Application.Dtos;
-using Infrastructure.ExternalServices.IranKish.Dtos;
 
 namespace Application.Interfaces;
 

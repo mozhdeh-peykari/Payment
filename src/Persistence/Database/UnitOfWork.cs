@@ -1,5 +1,5 @@
-﻿using Domain.Entities;
-using Domain.Interfaces;
+﻿using Application.Database;
+using Domain.Entities;
 
 namespace Persistence.Database
 {

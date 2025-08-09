@@ -1,6 +1,6 @@
 ﻿using Application.Dtos;
 using Application.Interfaces;
-using Domain.Settings;
+using Application.IPGServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Presentation.Models;
@@ -12,10 +12,10 @@ namespace Presentation.Controllers;
 public class PaymentController : Controller
 {
     private readonly IPaymentService _paymentService;
-    private readonly PaymentServiceSettings _settings;
+    private readonly IranKishIpgServiceSettings _settings;
 
     public PaymentController(IPaymentService paymentService,
-        IOptions<PaymentServiceSettings> settings)
+        IOptions<IranKishIpgServiceSettings> settings)
     {
         _paymentService = paymentService;
         _settings = settings.Value;

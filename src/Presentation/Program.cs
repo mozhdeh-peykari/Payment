@@ -1,6 +1,5 @@
 using Application.Extensions;
-using Domain;
-using Domain.Settings;
+using Application.IPGServices;
 using Infrastructure;
 using Persistence;
 using Presentation.ActionFilters;
@@ -8,7 +7,7 @@ using Presentation.ActionFilters;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.Configure<PaymentServiceSettings>(builder.Configuration.GetSection("IranKish"));
+builder.Services.Configure<IranKishIpgServiceSettings>(builder.Configuration.GetSection("IranKish"));
 builder.AddInfrastructureServices();
 builder.AddPersistenceServices();
 builder.AddApplicationServices();

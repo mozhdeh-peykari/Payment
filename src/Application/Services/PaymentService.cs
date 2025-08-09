@@ -33,17 +33,8 @@ public class PaymentService : IPaymentService
 
     public async Task<GetTokenResponse> GetTokenAsync(GetTokenRequest model)
     {
-        var tokenRequest = new TokenRequestDto
-        {
-            Amount = model.Amount,
-            ReturnUrl = model.ReturnUrl,
+        var requestId = Guid.NewGuid().ToString("N").Substring(0, 20);
 
-        };
-
-        await _iranKishIpgService.GetTokenAsync(tokenRequest);
-
-        
-        //db
         var payment = new Payment
         {
             Amount = model.Amount,
@@ -55,6 +46,31 @@ public class PaymentService : IPaymentService
 
         await _unitOfWork.Payments.AddAsync(payment);
         await _unitOfWork.SaveAsync();
+
+        var tokenRequest = new TokenRequestDto
+        {
+            Request = new RequestDto
+            {
+                Amount = model.Amount,
+                RevertUri = model.ReturnUrl,
+                RequestId = requestId
+            }
+        };
+
+        await _iranKishIpgService.GetTokenAsync(tokenRequest);
+
+        //db
+        //var payment = new Payment
+        //{
+        //    Amount = model.Amount,
+        //    TerminalId = _settings.TerminalId,
+        //    CreatedDate = DateTime.UtcNow,
+        //    RequestId = requestId,
+        //    PaymentState = PaymentState.Pending
+        //};
+
+        //await _unitOfWork.Payments.AddAsync(payment);
+        //await _unitOfWork.SaveAsync();
 
         var paymentDetail = new PaymentDetail
         {
@@ -258,7 +274,7 @@ public class PaymentService : IPaymentService
             };
         }
 
-        if(_iranKishIpgService.IsSuccessful(response.ResponseCode))
+        if (_iranKishIpgService.IsSuccessful(response.ResponseCode))
         {
             payment.PaymentState = PaymentState.Paid;
             confirmDetail.Response = JsonSerializer.Serialize(response);

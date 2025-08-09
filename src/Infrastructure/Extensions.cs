@@ -1,4 +1,5 @@
-﻿using Infrastructure.ExternalServices.IranKish;
+﻿using Application.IPGServices.Interfaces;
+using Infrastructure.ExternalServices.IranKish;
 using Infrastructure.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ public static class Extensions
         //            {
         //                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         //            });
-        builder.Services.AddScoped<IIranKishClient, IranKishIPGService>();
+        builder.Services.AddScoped<IIranKishIPGService, IranKishIPGService>();
         builder.Services.AddScoped<ILogger, SerilogLogger>();
     }
 }

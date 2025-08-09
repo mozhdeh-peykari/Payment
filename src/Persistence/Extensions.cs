@@ -1,4 +1,4 @@
-﻿using Domain.Interfaces;
+﻿using Application.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
