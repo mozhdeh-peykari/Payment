@@ -1,0 +1,24 @@
+# Ignore build outputs
+bin/
+obj/
+
+# VS and user files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# npm / node (if any)
+node_modules/
+
+# Docker files (if you have them in subfolders)
+Dockerfile*
+docker-compose*
+
+# Logs
+*.log
+
+# IDE settings
+*.idea/
+*.vscode/

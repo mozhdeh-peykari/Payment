@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  payment-api:
+    build: .
+    container_name: payment-api
+    ports:
+      - "5000:8080"
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=Payment;Username=postgres;Password=Mahtab;
+
+  db:
+    image: postgres:16
+    container_name: payment-db
+    restart: always
+    environment:
+      POSTGRES_DB: Payment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Mahtab
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
