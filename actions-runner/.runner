@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 21,
+  "agentName": "DESKTOP-4VIN5SV",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus24.actions.githubusercontent.com/6WtccrxyuKbvOPSU3W4uQPXuIgWArs77Zk28v9J5LahjesZFa3/",
+  "gitHubUrl": "https://github.com/mozhdeh-peykari/Payment",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
