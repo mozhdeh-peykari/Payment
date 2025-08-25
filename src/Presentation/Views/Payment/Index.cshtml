@@ -7,6 +7,7 @@
 @using (Html.BeginForm("StartPayment", "Payment", FormMethod.Post))
 {
     <div>
+        <h1>Hi</h1>
         @Html.LabelFor(m => m.Amount)
         <input class="form-control" data-val="true" data-val-required="The Amount field is required." id="Amount" name="Amount" type="text" value="10000">
         @Html.ValidationMessageFor(m => m.Amount)
